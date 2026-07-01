@@ -1,10 +1,10 @@
 import "./App.css";
 import { useEffect, useState } from "react";
+import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
 import * as BooksAPI from "./BooksAPI";
 import Book from "./components/Book";
 
 function App() {
-  const [showSearchPage, setShowSearchPage] = useState(false);
   const [books, setBooks] = useState([]);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -129,83 +129,127 @@ function App() {
     return "Unknown Author";
   };
 
+  const clearSearch = () => {
+    setQuery("");
+    setSearchResults([]);
+  };
+
   return (
-    <div className="app">
-      {showSearchPage ? (
-        <div className="search-books">
-          <div className="search-books-bar">
-            <button
-              className="close-search"
-              onClick={() => {
-                setShowSearchPage(false);
-                setQuery("");
-                setSearchResults([]);
-              }}
-            >
-              Close
-            </button>
+    <BrowserRouter>
+      <div className="app">
+        <Switch>
+          <Route exact path="/">
+            <ListBooks
+              shelves={shelves}
+              books={books}
+              getBookCover={getBookCover}
+              getBookAuthors={getBookAuthors}
+              handleShelfChange={handleShelfChange}
+            />
+          </Route>
 
-            <div className="search-books-input-wrapper">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by title, author, or ISBN"
-              />
+          <Route path="/search">
+            <SearchBooks
+              query={query}
+              setQuery={setQuery}
+              searchResults={searchResults}
+              getBookCover={getBookCover}
+              getBookAuthors={getBookAuthors}
+              handleShelfChange={handleShelfChange}
+              clearSearch={clearSearch}
+            />
+          </Route>
+        </Switch>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+function ListBooks({
+  shelves,
+  books,
+  getBookCover,
+  getBookAuthors,
+  handleShelfChange,
+}) {
+  return (
+    <div className="list-books">
+      <div className="list-books-title">
+        <h1>MyReads</h1>
+      </div>
+
+      <div className="list-books-content">
+        <div>
+          {shelves.map((shelf) => (
+            <div className="bookshelf" key={shelf.key}>
+              <h2 className="bookshelf-title">{shelf.title}</h2>
+
+              <div className="bookshelf-books">
+                <ol className="books-grid">
+                  {books
+                    .filter((book) => book.shelf === shelf.key)
+                    .map((book) => (
+                      <Book
+                        key={book.id}
+                        book={book}
+                        getBookCover={getBookCover}
+                        getBookAuthors={getBookAuthors}
+                        handleShelfChange={handleShelfChange}
+                      />
+                    ))}
+                </ol>
+              </div>
             </div>
-          </div>
-
-          <div className="search-books-results">
-            <ol className="books-grid">
-              {searchResults.map((book) => (
-                <Book
-                  key={book.id}
-                  book={book}
-                  getBookCover={getBookCover}
-                  getBookAuthors={getBookAuthors}
-                  handleShelfChange={handleShelfChange}
-                />
-              ))}
-            </ol>
-          </div>
+          ))}
         </div>
-      ) : (
-        <div className="list-books">
-          <div className="list-books-title">
-            <h1>MyReads</h1>
-          </div>
+      </div>
 
-          <div className="list-books-content">
-            <div>
-              {shelves.map((shelf) => (
-                <div className="bookshelf" key={shelf.key}>
-                  <h2 className="bookshelf-title">{shelf.title}</h2>
+      <div className="open-search">
+        <Link to="/search">Add a book</Link>
+      </div>
+    </div>
+  );
+}
 
-                  <div className="bookshelf-books">
-                    <ol className="books-grid">
-                      {books
-                        .filter((book) => book.shelf === shelf.key)
-                        .map((book) => (
-                          <Book
-                            key={book.id}
-                            book={book}
-                            getBookCover={getBookCover}
-                            getBookAuthors={getBookAuthors}
-                            handleShelfChange={handleShelfChange}
-                          />
-                        ))}
-                    </ol>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+function SearchBooks({
+  query,
+  setQuery,
+  searchResults,
+  getBookCover,
+  getBookAuthors,
+  handleShelfChange,
+  clearSearch,
+}) {
+  return (
+    <div className="search-books">
+      <div className="search-books-bar">
+        <Link to="/" className="close-search" onClick={clearSearch}>
+          Close
+        </Link>
 
-          <div className="open-search">
-            <button onClick={() => setShowSearchPage(true)}>Add a book</button>
-          </div>
+        <div className="search-books-input-wrapper">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title, author, or ISBN"
+          />
         </div>
-      )}
+      </div>
+
+      <div className="search-books-results">
+        <ol className="books-grid">
+          {searchResults.map((book) => (
+            <Book
+              key={book.id}
+              book={book}
+              getBookCover={getBookCover}
+              getBookAuthors={getBookAuthors}
+              handleShelfChange={handleShelfChange}
+            />
+          ))}
+        </ol>
+      </div>
     </div>
   );
 }
