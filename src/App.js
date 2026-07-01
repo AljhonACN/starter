@@ -1,88 +1,12 @@
 import "./App.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import * as BooksAPI from "./BooksAPI";
 
 function App() {
   const [showSearchPage, setShowSearchPage] = useState(false);
-
-  const [books, setBooks] = useState([
-    {
-      id: 1,
-      title: "To Kill a Mockingbird",
-      author: "Harper Lee",
-      shelf: "currentlyReading",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=PGR2AwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 193,
-    },
-    {
-      id: 2,
-      title: "Ender's Game",
-      author: "Orson Scott Card",
-      shelf: "currentlyReading",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=yDtCuFHXbAYC&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 188,
-    },
-    {
-      id: 3,
-      title: "1776",
-      author: "David McCullough",
-      shelf: "wantToRead",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=uu1mC6zWNTwC&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 193,
-    },
-    {
-      id: 4,
-      title: "Harry Potter and the Sorcerer's Stone",
-      author: "J.K. Rowling",
-      shelf: "wantToRead",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 192,
-    },
-    {
-      id: 5,
-      title: "The Hobbit",
-      author: "J.R.R. Tolkien",
-      shelf: "read",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=pD6arNyKyi8C&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 192,
-    },
-    {
-      id: 6,
-      title: "Oh, the Places You'll Go!",
-      author: "Seuss",
-      shelf: "read",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=1q_xAwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 174,
-    },
-    {
-      id: 7,
-      title: "The Adventures of Tom Sawyer",
-      author: "Mark Twain",
-      shelf: "read",
-      likes: 0,
-      cover:
-        'url("http://books.google.com/books/content?id=32haAAAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api")',
-      width: 128,
-      height: 192,
-    },
-  ]);
+  const [books, setBooks] = useState([]);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
 
   const shelves = [
     {
@@ -99,20 +23,109 @@ function App() {
     },
   ];
 
-  const handleShelfChange = (id, newShelf) => {
-    setBooks((prevBooks) =>
-      prevBooks.map((book) =>
-        book.id === id ? { ...book, shelf: newShelf } : book,
+  useEffect(() => {
+    const getAllBooks = async () => {
+      const allBooks = await BooksAPI.getAll();
+      setBooks(allBooks);
+    };
+
+    getAllBooks();
+  }, []);
+
+  useEffect(() => {
+    const searchBooks = async () => {
+      if (query.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+
+      const results = await BooksAPI.search(query);
+
+      if (results.error) {
+        setSearchResults([]);
+        return;
+      }
+
+      const updatedSearchResults = results.map((searchBook) => {
+        const existingBook = books.find((book) => book.id === searchBook.id);
+
+        if (existingBook) {
+          return {
+            ...searchBook,
+            shelf: existingBook.shelf,
+          };
+        }
+
+        return {
+          ...searchBook,
+          shelf: "none",
+        };
+      });
+
+      setSearchResults(updatedSearchResults);
+    };
+
+    searchBooks();
+  }, [query, books]);
+
+  const handleShelfChange = async (book, newShelf) => {
+    await BooksAPI.update(book, newShelf);
+
+    setBooks((prevBooks) => {
+      const bookExists = prevBooks.some(
+        (currentBook) => currentBook.id === book.id,
+      );
+
+      if (newShelf === "none") {
+        return prevBooks.filter((currentBook) => currentBook.id !== book.id);
+      }
+
+      if (bookExists) {
+        return prevBooks.map((currentBook) =>
+          currentBook.id === book.id
+            ? {
+                ...currentBook,
+                shelf: newShelf,
+              }
+            : currentBook,
+        );
+      }
+
+      return [
+        ...prevBooks,
+        {
+          ...book,
+          shelf: newShelf,
+        },
+      ];
+    });
+
+    setSearchResults((prevResults) =>
+      prevResults.map((currentBook) =>
+        currentBook.id === book.id
+          ? {
+              ...currentBook,
+              shelf: newShelf,
+            }
+          : currentBook,
       ),
     );
   };
 
-  const handleLike = (id) => {
-    setBooks((prevBooks) =>
-      prevBooks.map((book) =>
-        book.id === id ? { ...book, likes: book.likes + 1 } : book,
-      ),
-    );
+  const getBookCover = (book) => {
+    if (book.imageLinks && book.imageLinks.thumbnail) {
+      return `url("${book.imageLinks.thumbnail}")`;
+    }
+
+    return "none";
+  };
+
+  const getBookAuthors = (book) => {
+    if (book.authors && book.authors.length > 0) {
+      return book.authors.join(", ");
+    }
+
+    return "Unknown Author";
   };
 
   const renderBook = (book) => {
@@ -123,32 +136,35 @@ function App() {
             <div
               className="book-cover"
               style={{
-                width: book.width,
-                height: book.height,
-                backgroundImage: book.cover,
+                width: 128,
+                height: 193,
+                backgroundImage: getBookCover(book),
               }}
             ></div>
 
             <div className="book-shelf-changer">
               <select
-                value={book.shelf}
-                onChange={(e) => handleShelfChange(book.id, e.target.value)}
+                value={book.shelf || "none"}
+                onChange={(e) => handleShelfChange(book, e.target.value)}
               >
+                <option value="move" disabled>
+                  Move to...
+                </option>
+
                 <option value="currentlyReading">Currently Reading</option>
+
                 <option value="wantToRead">Want to Read</option>
+
                 <option value="read">Read</option>
+
                 <option value="none">None</option>
               </select>
             </div>
           </div>
 
           <div className="book-title">{book.title}</div>
-          <div className="book-authors">{book.author}</div>
 
-          <p>Current Shelf: {book.shelf}</p>
-          <p>Likes: {book.likes}</p>
-
-          <button onClick={() => handleLike(book.id)}>Like Book</button>
+          <div className="book-authors">{getBookAuthors(book)}</div>
         </div>
       </li>
     );
@@ -161,7 +177,11 @@ function App() {
           <div className="search-books-bar">
             <button
               className="close-search"
-              onClick={() => setShowSearchPage(false)}
+              onClick={() => {
+                setShowSearchPage(false);
+                setQuery("");
+                setSearchResults([]);
+              }}
             >
               Close
             </button>
@@ -169,13 +189,17 @@ function App() {
             <div className="search-books-input-wrapper">
               <input
                 type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by title, author, or ISBN"
               />
             </div>
           </div>
 
           <div className="search-books-results">
-            <ol className="books-grid"></ol>
+            <ol className="books-grid">
+              {searchResults.map((book) => renderBook(book))}
+            </ol>
           </div>
         </div>
       ) : (
