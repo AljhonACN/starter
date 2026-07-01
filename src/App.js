@@ -1,6 +1,7 @@
 import "./App.css";
 import { useEffect, useState } from "react";
 import * as BooksAPI from "./BooksAPI";
+import Book from "./components/Book";
 
 function App() {
   const [showSearchPage, setShowSearchPage] = useState(false);
@@ -128,48 +129,6 @@ function App() {
     return "Unknown Author";
   };
 
-  const renderBook = (book) => {
-    return (
-      <li key={book.id}>
-        <div className="book">
-          <div className="book-top">
-            <div
-              className="book-cover"
-              style={{
-                width: 128,
-                height: 193,
-                backgroundImage: getBookCover(book),
-              }}
-            ></div>
-
-            <div className="book-shelf-changer">
-              <select
-                value={book.shelf || "none"}
-                onChange={(e) => handleShelfChange(book, e.target.value)}
-              >
-                <option value="move" disabled>
-                  Move to...
-                </option>
-
-                <option value="currentlyReading">Currently Reading</option>
-
-                <option value="wantToRead">Want to Read</option>
-
-                <option value="read">Read</option>
-
-                <option value="none">None</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="book-title">{book.title}</div>
-
-          <div className="book-authors">{getBookAuthors(book)}</div>
-        </div>
-      </li>
-    );
-  };
-
   return (
     <div className="app">
       {showSearchPage ? (
@@ -198,7 +157,15 @@ function App() {
 
           <div className="search-books-results">
             <ol className="books-grid">
-              {searchResults.map((book) => renderBook(book))}
+              {searchResults.map((book) => (
+                <Book
+                  key={book.id}
+                  book={book}
+                  getBookCover={getBookCover}
+                  getBookAuthors={getBookAuthors}
+                  handleShelfChange={handleShelfChange}
+                />
+              ))}
             </ol>
           </div>
         </div>
@@ -218,7 +185,15 @@ function App() {
                     <ol className="books-grid">
                       {books
                         .filter((book) => book.shelf === shelf.key)
-                        .map((book) => renderBook(book))}
+                        .map((book) => (
+                          <Book
+                            key={book.id}
+                            book={book}
+                            getBookCover={getBookCover}
+                            getBookAuthors={getBookAuthors}
+                            handleShelfChange={handleShelfChange}
+                          />
+                        ))}
                     </ol>
                   </div>
                 </div>
